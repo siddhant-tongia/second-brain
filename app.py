@@ -48,31 +48,56 @@ mydb = mysql.connector.connect(
 
 my_cursor = mydb.cursor()
 
-title = input("Enter the Title Of Resource:")
-category = input("Enter the Category Of Resource:")
-description = input("Enter the Description Of Resource:")
-link = input("Enter the Link Of Resource:")
+while True:
+  print("1. Add Resource")
+  print("2. Search by AI")
+  print("3. Browse by Category")
+  print("4. Delete Resource")
+  print("5. Exit")
 
-insert(title, category, description, link)
+  option = int(input("Enter the choice (1 to 5): "))
+  if(option == 1):
+    title = input("Enter the Title Of Resource:")
+    category = input("Enter the Category Of Resource:")
+    description = input("Enter the Description Of Resource:")
+    link = input("Enter the Link Of Resource:")
 
-resource_ids = input("Enter the ID of the resource to delete(seperated by commas{,}): ")
-id_list = [int(x) for x in resource_ids.split(",")]
+    insert(title, category, description, link)
+    pass
 
-delete_multiple(id_list)
+  elif(option == 2):
+    print("coming soon!")
+    pass
 
-categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
+  elif(option == 3):
+    categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
 
-for i,cat in enumerate (categories,start = 1):
-  print(f"{i}: {cat}")  
+    for i,cat in enumerate (categories,start = 1):
+      print(f"{i}: {cat}")  
 
-choice = (input("Choose a categories (1-5) and if want to view all categories then type all")).lower()
+    choice = (input("Choose a categories (1-5) and if want to view all categories then type all :")).lower()
 
-if(choice != "all"):
-  id_list = [int(num) for num in choice.split(",")]
+    if(choice != "all"):
+      id_list = [int(num) for num in choice.split(",")]
 
-  for i in id_list:
-    selected_category = categories[i-1]
-    view_by_category(selected_category);
+      for i in id_list:
+        selected_category = categories[i-1]
+        view_by_category(selected_category);
 
-else:
-  view_all()
+    else:
+      view_all()
+
+    pass
+  elif(option == 4):
+    resource_ids = input("Enter the ID of the resource to delete(seperated by commas{,}): ")
+    id_list = [int(x) for x in resource_ids.split(",")]
+
+    delete_multiple(id_list)
+    pass
+
+  elif(option == 5):
+    break
+
+  else:
+    print("Invalid choice, try again")
+
