@@ -33,11 +33,54 @@ def display_results(result):
     for label, value in zip(col, row):
       print(f"{label}: {value}")
     print("---")
+
 def view_all():
   my_cursor.execute("SELECT * FROM resources")
   result = my_cursor.fetchall()
   display_results(result)
 
+def ai_search(user_question):
+  my_cursor.execute("SELECT id, title, category, short_description FROM resources")
+  result = my_cursor.fetchall()
+
+  resource_text = ""
+
+  col = ("ID", "Title", "Category", "Description")
+  for row in result:
+    resource_text += ", ".join(f"{label}: {value}" for label, value in zip(col, row)) + "\n"
+    pass
+
+  prompt_text = prompt(resource_text, user_question)
+
+def prompt(resource_text,user_question):
+  return f'''
+  You are the retrieval engine for a personal "Second Brain" knowledge system. Your task is to analyze a list of saved resources and identify which ones are conceptually relevant to the user's query.
+
+  Each resource in the dataset contains four fields: "ID", "Title", "Category", and "Description".
+
+  Retrieval Rules:
+
+  Match based on underlying concepts and intent, not just exact keywords.
+
+  If you find relevant resources, add their exact IDs to the matching_ids list and leave the message field empty.
+
+  If no resources match the query, leave the matching_ids list empty and provide a polite, well-written response in the message field stating that no relevant notes were found in the archive.
+
+  Saved Resources:
+  {resource_text}
+
+  User Query:
+  {user_question}
+
+  Output Constraints:
+  You must output your response as raw, valid JSON.
+
+  Do not include any explanations, greetings, or conversational text outside the JSON object.
+
+  Do not wrap the JSON in Markdown formatting or code blocks (e.g., do not use ```json).
+
+  Use this exact schema:
+  {{"matching_ids": [list of integers], "message": "String or null"}}'''
 
 mydb = mysql.connector.connect(
   host = "localhost",
@@ -66,7 +109,8 @@ while True:
     pass
 
   elif(option == 2):
-    print("coming soon!")
+    user_question = input("Hey I am your second brain helper to extract useful resources, today how may i help you:\n")
+    ai_search(user_question)
     pass
 
   elif(option == 3):
@@ -101,3 +145,6 @@ while True:
   else:
     print("Invalid choice, try again")
 
+
+
+  
