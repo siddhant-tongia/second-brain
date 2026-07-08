@@ -22,6 +22,14 @@ def delete_multiple(id_list):
   mydb.commit()
 
 
+def display_results(result):
+  col = ("ID", "Title", "Category", "Description", "Link", "Created_at", "Updated_at")
+
+  for row in result:
+    for label, value in zip(col, row):
+      print(f"{label}: {value}")
+    print("---")
+
 def view_by_category(selected_category):
   query = "SELECT * FROM resources WHERE Category = %s"
   values = (selected_category,)
@@ -30,13 +38,6 @@ def view_by_category(selected_category):
   result = my_cursor.fetchall()
   display_results(result)
 
-def display_results(result):
-  col = ("ID", "Title", "Category", "Description", "Link", "Created_at", "Updated_at")
-
-  for row in result:
-    for label, value in zip(col, row):
-      print(f"{label}: {value}")
-    print("---")
 
 def view_all():
   my_cursor.execute("SELECT * FROM resources")
@@ -141,12 +142,28 @@ while True:
   print("3. Browse by Category")
   print("4. Delete Resource")
   print("5. Exit")
+  try:
+    option = int(input("Enter the choice (1 to 5): "))
 
-  option = int(input("Enter the choice (1 to 5): "))
+  except ValueError:
+    print("Please enter a valid number between 1 and 5.")
+    continue
+
   if(option == 1):
     title = input("Enter the Title Of Resource:")
-    category = input("Enter the Category Of Resource:")
+    while title.strip() == "":
+      title = input("Title cannot be empty. Enter the Title Of Resource:")
+
+    categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
+    print("Here are some categories to initilize the data choose one of them")
+    for i,cat in enumerate (categories,start = 1):
+      print(f"{i}: {cat}")  
+
+    choice = int(input("Choose a category from (1-5)"))
+    category = categories[choice-1]
     description = input("Enter the Description Of Resource:")
+    while description.strip() == "":
+      description = input("Description cannot be empty. Enter the Description Of Resource:")
     link = input("Enter the Link Of Resource:")
 
     insert(title, category, description, link)
