@@ -21,6 +21,12 @@ def delete_multiple(id_list):
   my_cursor.execute(query, tuple(id_list))
   mydb.commit()
 
+def edit_resource(resource_id, field, new_value):
+  query = f"UPDATE resources SET {field} = %s WHERE id = %s"
+  values = (new_value, resource_id)
+
+  my_cursor.execute(query, values)
+  mydb.commit()
 
 def display_results(result):
   col = ("ID", "Title", "Category", "Description", "Link", "Created_at", "Updated_at")
@@ -140,13 +146,14 @@ while True:
   print("1. Add Resource")
   print("2. Search by AI")
   print("3. Browse by Category")
-  print("4. Delete Resource")
-  print("5. Exit")
+  print("4. Update Resource")
+  print("5. Delete Resource")
+  print("6. Exit")
   try:
-    option = int(input("Enter the choice (1 to 5): "))
+    option = int(input("Enter the choice (1 to 6): "))
 
   except ValueError:
-    print("Please enter a valid number between 1 and 5.")
+    print("Please enter a valid number between 1 and 6.")
     continue
 
   if(option == 1):
@@ -191,16 +198,43 @@ while True:
 
     else:
       view_all()
-
     pass
+
   elif(option == 4):
+    resource_id = input("Enter the resource id:")
+    col = ("Title", "Category", "SHORT_DESCRIPTION", "Link")
+    for i,j in enumerate(col,start=1):
+      print(f"{i}. {j}")
+    
+    field_no = input("Enter Field(s) that to edit seperated by commas")
+    field_no_list = [int(x) for x in field_no.split(",")]
+
+    for x in field_no_list:
+      field = col[x-1]
+      if(field == "Category"):
+
+        categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
+        print("Enter the changed category number:")
+        for i,cat in enumerate (categories,start = 1):
+          print(f"{i}: {cat}")  
+
+        choice = int(input("Choose a category from (1-5)"))
+        category = categories[choice-1]
+        edit_resource(resource_id,field,category)
+        
+      else:
+        changeed_value = input(f"Enter the change in {field}:")
+        edit_resource(resource_id,field,changeed_value)
+        
+
+  elif(option == 5):
     resource_ids = input("Enter the ID of the resource to delete(seperated by commas{,}): ")
     id_list = [int(x) for x in resource_ids.split(",")]
 
     delete_multiple(id_list)
     pass
 
-  elif(option == 5):
+  elif(option == 6):
     break
 
   else:
