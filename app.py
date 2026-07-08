@@ -1,11 +1,17 @@
 import mysql.connector
 import os
-import sys 
+import sys
 from openai import OpenAI
-import requests
 import json
 from dotenv import load_dotenv
+
 load_dotenv()
+
+# Valid column names for update operations (whitelist to prevent SQL injection)
+ALLOWED_FIELDS = {"title", "category", "short_description", "link"}
+
+# Predefined categories
+CATEGORIES = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
 
 def insert(title, category, description, link):
   query = "INSERT INTO resources (title, category, short_description, link) VALUES (%s, %s, %s, %s)"
@@ -22,6 +28,9 @@ def delete_multiple(id_list):
   mydb.commit()
 
 def edit_resource(resource_id, field, new_value):
+  if field.lower() not in ALLOWED_FIELDS:
+    print(f"Invalid field: {field}")
+    return
   query = f"UPDATE resources SET {field} = %s WHERE id = %s"
   values = (new_value, resource_id)
 
@@ -82,19 +91,20 @@ def prompt(resource_text,user_question):
 
 def call_ai(prompt_text):
   try:
-      client = OpenAI(
+    client = OpenAI(
       api_key=os.getenv("API_KEY"),
       base_url="https://openrouter.ai/api/v1",
-      )
-      response = client.chat.completions.create(
-          model="tencent/hy3:free",
-          messages=[{"role": "user", "content": prompt_text}],
-      )
-      return response.choices[0].message.content
-  
+    )
+    model = os.getenv("Model", "tencent/hy3:free")
+    response = client.chat.completions.create(
+      model=model,
+      messages=[{"role": "user", "content": prompt_text}],
+    )
+    return response.choices[0].message.content
+
   except Exception as e:
-      print(f"Error generating:{e}")
-      return None  
+    print(f"Error generating: {e}")
+    return None
 
 def extraction(matching_id):
   ids = ", ".join(["%s"] * len(matching_id))
@@ -112,7 +122,6 @@ def ai_search(user_question):
   col = ("ID", "Title", "Category", "Description")
   for row in result:
     resource_text += ", ".join(f"{label}: {value}" for label, value in zip(col, row)) + "\n"
-    pass
 
   prompt_text = prompt(resource_text, user_question)
   response = call_ai(prompt_text)
@@ -124,10 +133,9 @@ def ai_search(user_question):
     matching_ids = data["matching_ids"]
     message = data["message"]
 
-    if(matching_ids):
+    if matching_ids:
       result = extraction(matching_ids)
       display_results(result)
-      pass
     else:
       print(message)
 
@@ -142,104 +150,120 @@ mydb = mysql.connector.connect(
 
 my_cursor = mydb.cursor()
 
-while True:
-  print("1. Add Resource")
-  print("2. Search by AI")
-  print("3. Browse by Category")
-  print("4. Update Resource")
-  print("5. Delete Resource")
-  print("6. Exit")
-  try:
-    option = int(input("Enter the choice (1 to 6): "))
+def choose_category():
+  """Display category menu and return the selected category."""
+  for i, cat in enumerate(CATEGORIES, start=1):
+    print(f"  {i}. {cat}")
+  while True:
+    try:
+      choice = int(input("Choose a category (1-5): "))
+      if 1 <= choice <= len(CATEGORIES):
+        return CATEGORIES[choice - 1]
+      print("Please choose a number between 1 and 5.")
+    except ValueError:
+      print("Please enter a valid number.")
 
-  except ValueError:
-    print("Please enter a valid number between 1 and 6.")
-    continue
 
-  if(option == 1):
-    title = input("Enter the Title Of Resource:")
-    while title.strip() == "":
-      title = input("Title cannot be empty. Enter the Title Of Resource:")
+def main():
+  while True:
+    print("\n===== Second Brain =====")
+    print("1. Add Resource")
+    print("2. Search by AI")
+    print("3. Browse by Category")
+    print("4. Update Resource")
+    print("5. Delete Resource")
+    print("6. Exit")
+    try:
+      option = int(input("Enter your choice (1-6): "))
+    except ValueError:
+      print("Please enter a valid number between 1 and 6.")
+      continue
 
-    categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
-    print("Here are some categories to initilize the data choose one of them")
-    for i,cat in enumerate (categories,start = 1):
-      print(f"{i}: {cat}")  
+    if option == 1:
+      title = input("Enter the Title of Resource: ")
+      while title.strip() == "":
+        title = input("Title cannot be empty. Enter the Title of Resource: ")
 
-    choice = int(input("Choose a category from (1-5)"))
-    category = categories[choice-1]
-    description = input("Enter the Description Of Resource:")
-    while description.strip() == "":
-      description = input("Description cannot be empty. Enter the Description Of Resource:")
-    link = input("Enter the Link Of Resource:")
+      print("Choose a category:")
+      category = choose_category()
 
-    insert(title, category, description, link)
-    pass
+      description = input("Enter the Description of Resource: ")
+      while description.strip() == "":
+        description = input("Description cannot be empty. Enter the Description of Resource: ")
 
-  elif(option == 2):
-    user_question = input("Hey I am your second brain helper to extract useful resources, today how may i help you:\n")
-    ai_search(user_question)
-    pass
+      link = input("Enter the Link of Resource (or leave blank): ")
+      insert(title, category, description, link)
+      print("Resource added successfully!")
 
-  elif(option == 3):
-    categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
+    elif option == 2:
+      user_question = input("Hey! I'm your Second Brain helper. What are you looking for today?\n> ")
+      ai_search(user_question)
 
-    for i,cat in enumerate (categories,start = 1):
-      print(f"{i}: {cat}")  
+    elif option == 3:
+      for i, cat in enumerate(CATEGORIES, start=1):
+        print(f"  {i}. {cat}")
 
-    choice = (input("Choose a categories (1-5) and if want to view all categories then type all :")).lower()
+      choice = input("Choose categories (1-5, comma-separated) or type 'all': ").lower().strip()
 
-    if(choice != "all"):
-      id_list = [int(num) for num in choice.split(",")]
+      if choice != "all":
+        try:
+          id_list = [int(num.strip()) for num in choice.split(",")]
+          for i in id_list:
+            if 1 <= i <= len(CATEGORIES):
+              view_by_category(CATEGORIES[i - 1])
+            else:
+              print(f"Skipping invalid choice: {i}")
+        except ValueError:
+          print("Invalid input. Please enter numbers separated by commas.")
+      else:
+        view_all()
 
-      for i in id_list:
-        selected_category = categories[i-1]
-        view_by_category(selected_category);
+    elif option == 4:
+      resource_id = input("Enter the resource ID: ")
+      col = ("title", "category", "short_description", "link")
+      display_col = ("Title", "Category", "Description", "Link")
+      for i, j in enumerate(display_col, start=1):
+        print(f"  {i}. {j}")
+
+      field_no = input("Enter field number(s) to edit (comma-separated): ")
+      try:
+        field_no_list = [int(x.strip()) for x in field_no.split(",")]
+      except ValueError:
+        print("Invalid input.")
+        continue
+
+      for x in field_no_list:
+        if x < 1 or x > len(col):
+          print(f"Skipping invalid field number: {x}")
+          continue
+        field = col[x - 1]
+        if field == "category":
+          print("Choose the new category:")
+          new_value = choose_category()
+        else:
+          new_value = input(f"Enter the new value for {display_col[x - 1]}: ")
+        edit_resource(resource_id, field, new_value)
+      print("Resource updated successfully!")
+
+    elif option == 5:
+      resource_ids = input("Enter the ID(s) to delete (comma-separated): ")
+      try:
+        id_list = [int(x.strip()) for x in resource_ids.split(",")]
+        delete_multiple(id_list)
+        print("Resource(s) deleted successfully!")
+      except ValueError:
+        print("Invalid input. Please enter numbers separated by commas.")
+
+    elif option == 6:
+      print("Goodbye! Keep building your Second Brain 🧠")
+      break
 
     else:
-      view_all()
-    pass
-
-  elif(option == 4):
-    resource_id = input("Enter the resource id:")
-    col = ("Title", "Category", "SHORT_DESCRIPTION", "Link")
-    for i,j in enumerate(col,start=1):
-      print(f"{i}. {j}")
-    
-    field_no = input("Enter Field(s) that to edit seperated by commas")
-    field_no_list = [int(x) for x in field_no.split(",")]
-
-    for x in field_no_list:
-      field = col[x-1]
-      if(field == "Category"):
-
-        categories = ["AI Resources", "Business Ideas", "DSA Concepts", "Motivation", "Personal Growth"]
-        print("Enter the changed category number:")
-        for i,cat in enumerate (categories,start = 1):
-          print(f"{i}: {cat}")  
-
-        choice = int(input("Choose a category from (1-5)"))
-        category = categories[choice-1]
-        edit_resource(resource_id,field,category)
-        
-      else:
-        changeed_value = input(f"Enter the change in {field}:")
-        edit_resource(resource_id,field,changeed_value)
-        
-
-  elif(option == 5):
-    resource_ids = input("Enter the ID of the resource to delete(seperated by commas{,}): ")
-    id_list = [int(x) for x in resource_ids.split(",")]
-
-    delete_multiple(id_list)
-    pass
-
-  elif(option == 6):
-    break
-
-  else:
-    print("Invalid choice, try again")
+      print("Invalid choice, try again.")
 
 
-
-  
+if __name__ == "__main__":
+  try:
+    main()
+  finally:
+    mydb.close()
