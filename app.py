@@ -1,5 +1,9 @@
 import mysql.connector
-import os 
+import os
+import sys 
+from openai import OpenAI
+import requests
+import json
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -39,19 +43,6 @@ def view_all():
   result = my_cursor.fetchall()
   display_results(result)
 
-def ai_search(user_question):
-  my_cursor.execute("SELECT id, title, category, short_description FROM resources")
-  result = my_cursor.fetchall()
-
-  resource_text = ""
-
-  col = ("ID", "Title", "Category", "Description")
-  for row in result:
-    resource_text += ", ".join(f"{label}: {value}" for label, value in zip(col, row)) + "\n"
-    pass
-
-  prompt_text = prompt(resource_text, user_question)
-
 def prompt(resource_text,user_question):
   return f'''
   You are the retrieval engine for a personal "Second Brain" knowledge system. Your task is to analyze a list of saved resources and identify which ones are conceptually relevant to the user's query.
@@ -81,6 +72,59 @@ def prompt(resource_text,user_question):
 
   Use this exact schema:
   {{"matching_ids": [list of integers], "message": "String or null"}}'''
+
+def call_ai(prompt_text):
+  try:
+      client = OpenAI(
+      api_key=os.getenv("API_KEY"),
+      base_url="https://openrouter.ai/api/v1",
+      )
+      response = client.chat.completions.create(
+          model="tencent/hy3:free",
+          messages=[{"role": "user", "content": prompt_text}],
+      )
+      return response.choices[0].message.content
+  
+  except Exception as e:
+      print(f"Error generating:{e}")
+      return None  
+
+def extraction(matching_id):
+  ids = ", ".join(["%s"] * len(matching_id))
+  query = f"SELECT * FROM resources WHERE id IN ({ids})"
+
+  my_cursor.execute(query,tuple(matching_id))
+  return my_cursor.fetchall()
+
+def ai_search(user_question):
+  my_cursor.execute("SELECT id, title, category, short_description FROM resources")
+  result = my_cursor.fetchall()
+
+  resource_text = ""
+
+  col = ("ID", "Title", "Category", "Description")
+  for row in result:
+    resource_text += ", ".join(f"{label}: {value}" for label, value in zip(col, row)) + "\n"
+    pass
+
+  prompt_text = prompt(resource_text, user_question)
+  response = call_ai(prompt_text)
+  if response is None:
+    print("Sorry, the AI search couldn't be completed right now. Please try again later.")
+    return
+  else:
+    data = json.loads(response)
+    matching_ids = data["matching_ids"]
+    message = data["message"]
+
+    if(matching_ids):
+      result = extraction(matching_ids)
+      display_results(result)
+      pass
+    else:
+      print(message)
+
+
 
 mydb = mysql.connector.connect(
   host = "localhost",
