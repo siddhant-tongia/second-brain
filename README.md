@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.8+"/></a>
   <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL-8.0+-orange?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+"/></a>
+  <a href="https://streamlit.io/"><img src="https://img.shields.io/badge/Streamlit-1.x-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit"/></a>
   <a href="https://openrouter.ai/"><img src="https://img.shields.io/badge/AI-OpenRouter-purple?style=for-the-badge&logo=openai&logoColor=white" alt="OpenRouter AI"/></a>
   <a href="https://github.com/siddhant-tongia/second-brain/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License MIT"/></a>
 </p>
@@ -20,11 +21,13 @@
 
 ## 🌟 What is Second Brain?
 
-**Second Brain** is a CLI-based personal knowledge vault that lets you save, organize, and retrieve your most valuable resources — articles, tutorials, ideas, and bookmarks — using **AI-powered semantic search**.
+**Second Brain** is a personal knowledge vault that lets you save, organize, and retrieve your most valuable resources — articles, tutorials, ideas, and bookmarks — using **AI-powered semantic search**.
+
+Available in two modes:
+- 🖥️ **CLI** (`app.py`) — lightweight terminal interface
+- 🌐 **Web UI** (`streamlit_app.py`) — modern, interactive Streamlit dashboard with custom styling
 
 Stop losing bookmarks in browser tabs. Stop forgetting that *one amazing article* you read last month. Let your Second Brain remember it for you.
-
-> **📌 Status:** Backend (CLI) is complete & functional. A beautiful UI is coming within the next week — stay tuned!
 
 ---
 
@@ -44,23 +47,24 @@ Stop losing bookmarks in browser tabs. Stop forgetting that *one amazing article
 ## 🧩 Architecture
 
 ```
-┌──────────────────────────────────────────────────┐
-│                   Second Brain                   │
-├──────────────────────────────────────────────────┤
-│                                                  │
-│   User ──► CLI Menu ──► MySQL Database           │
-│                │                                 │
-│                ├──► AI Search                    │
-│                │      │                          │
-│                │      ├──► Fetch all resources   │
-│                │      ├──► Build prompt           │
-│                │      ├──► OpenRouter API (LLM)  │
-│                │      └──► Return matched IDs    │
-│                │                                 │
-│                ├──► CRUD Operations              │
-│                └──► Category Browsing            │
-│                                                  │
-└──────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│                     Second Brain                      │
+├───────────────────────────────────────────────────────┤
+│                                                       │
+│   User ──► CLI (app.py)  ──────► MySQL Database       │
+│         ──► Web UI (streamlit_app.py) ──┘             │
+│                │                                      │
+│                ├──► AI Search                         │
+│                │      │                               │
+│                │      ├──► Fetch all resources        │
+│                │      ├──► Build prompt                │
+│                │      ├──► OpenRouter API (LLM)       │
+│                │      └──► Return matched IDs         │
+│                │                                      │
+│                ├──► CRUD Operations                   │
+│                └──► Category Browsing                 │
+│                                                       │
+└───────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -121,8 +125,14 @@ Model=tencent/hy3:free
 
 ### 5. Run the App
 
+**Option A — CLI (terminal interface):**
 ```bash
 python app.py
+```
+
+**Option B — Web UI (Streamlit dashboard):**
+```bash
+streamlit run streamlit_app.py
 ```
 
 ---
@@ -163,7 +173,8 @@ The AI understands **intent and context** — not just keywords. Ask "something 
 
 ```
 second-brain/
-├── app.py              # Main application — CLI + AI search + CRUD
+├── app.py              # CLI version — terminal-based menu interface
+├── streamlit_app.py    # Web UI version — Streamlit dashboard
 ├── schema.sql          # MySQL database schema
 ├── requirements.txt    # Python dependencies
 ├── .env                # Environment variables (git-ignored)
@@ -192,6 +203,7 @@ Resources are organized into these categories:
 | Technology | Purpose |
 |---|---|
 | **Python** | Core application language |
+| **Streamlit** | Web UI framework (no HTML/JS needed) |
 | **MySQL** | Persistent resource storage |
 | **OpenAI SDK** | LLM API communication |
 | **OpenRouter** | AI model gateway (uses `tencent/hy3:free`) |
@@ -206,7 +218,7 @@ Resources are organized into these categories:
 - [x] Category-based browsing
 - [x] SQL injection prevention
 - [x] Environment variable management
-- [ ] 🎨 **Web UI** (coming this week!)
+- [x] 🎨 **Web UI** (Streamlit dashboard)
 - [ ] 🏷️ Tag-based search
 - [ ] 📊 Dashboard with analytics
 - [ ] 📤 Export to Markdown / Notion
